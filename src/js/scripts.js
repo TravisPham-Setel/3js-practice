@@ -1,8 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as dat from 'dat.gui';
 import nebula from '../img/nebula.jpg';
 import stars from '../img/stars.jpg';
+
+const monkeyUrl = new URL('../assets/monkey.glb', import.meta.url);
 
 // init renderer object
 const renderer = new THREE.WebGLRenderer();
@@ -128,6 +131,14 @@ scene.add(box2)
 box2.position.set(0, 15, 10);
 // box2.material.map = textureLoader.load(nebula);
 
+const assetLoader = new GLTFLoader();
+
+assetLoader.load(monkeyUrl.href, function(gltf) {
+  const model = gltf.scene;
+  scene.add(model);
+  model.position.set(-12, 4, 10);
+}, undefined, (err) => console.log(err))
+
 // init GUI helper to adjust element
 const gui = new dat.GUI()
 
@@ -165,11 +176,15 @@ let step = 0;
 const mousePosition = new THREE.Vector2();
 window.addEventListener('mousemove', function(e) {
   mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mousePosition.y = (e.clientY / window.innerHeight) * 2 + 1;
+  mousePosition.y = - (e.clientY / window.innerHeight) * 2 + 1;
 })
 
 const rayCaster = new THREE.Raycaster();
 
+// get sphere's ID
+const sphereId = sphere.id;
+// set a name for box2
+box2.name = 'theBox';
 
 function animate(time) {
   step += options.speed;
@@ -183,9 +198,28 @@ function animate(time) {
   // mouse tracking and print pointing objects
   rayCaster.setFromCamera(mousePosition, camera);
   const intersects = rayCaster.intersectObjects(scene.children);
-  console.log(intersects);
+  
+  // console.log(intersects);
+  for (let i = 0; i < intersects.length; i++) {
+    // change color for the sphere when the mouse cursor pointing to
+    if (intersects[i].object.id === sphereId) {
+      intersects[i].object.material.color.set(0xFF0000)
+    }
+
+    // rotate the box2 when get pointed by mouse cursor
+    if (intersects[i].object.name === 'theBox') {
+      intersects[i].object.rotation.x = time / 1000;
+      intersects[i].object.rotation.y = time / 1000;
+    }
+  }
 
   renderer.render(scene, camera);
 }
 
 renderer.setAnimationLoop(animate);
+
+window.addEventListener('resize', function() {
+  camera.aspect = this.window.innerWidth / this.window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(this.window.innerWidth, this.window.innerHeight);
+})
